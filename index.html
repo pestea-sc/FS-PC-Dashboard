@@ -347,17 +347,29 @@ async function loadUrl(u){
   try{const res=await fetch(directLink(u));if(!res.ok)throw new Error('HTTP '+res.status);readBuf(await res.arrayBuffer(),'Shared link');}
   catch(e){alert('Couldn’t fetch that link directly. SharePoint and OneDrive usually block cross-site downloads.\n\nDownload the file and use “Upload Excel” instead.\n\n('+e.message+')');}
 }
-// Auto-load the live workbook published next to this page (e.g. data.xlsx in the GitHub repo).
+// Auto-load the live workbook straight from GitHub (Contents API first, raw fallback)
+// so it is never behind the GitHub Pages CDN cache.
+const GH_OWNER='pestea-sc', GH_REPO='FS-PC-Dashboard', GH_BRANCH='main', GH_FILE='data.xlsx';
 async function autoLoad(silent){
+  const cb='cb='+Date.now();
+  // 1) GitHub Contents API — always reflects the latest commit
   try{
-    const res=await fetch('data.xlsx?t='+Date.now(),{cache:'no-store'});
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    readBuf(await res.arrayBuffer(),'Live data');
-    return true;
-  }catch(e){
-    if(!silent)alert('No live data file found yet (data.xlsx). Upload a workbook, or set up the SharePoint→GitHub sync.\n\n('+e.message+')');
-    return false;
-  }
+    const r=await fetch('https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_FILE+'?ref='+GH_BRANCH+'&'+cb,
+      {cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});
+    if(r.ok){
+      const j=await r.json();const b64=(j.content||'').replace(/\s/g,'');
+      const bin=atob(b64);const u=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+      readBuf(u.buffer,'Live data');return true;
+    }
+  }catch(e){}
+  // 2) raw.githubusercontent fallback
+  try{
+    const r=await fetch('https://raw.githubusercontent.com/'+GH_OWNER+'/'+GH_REPO+'/'+GH_BRANCH+'/'+GH_FILE+'?'+cb,{cache:'no-store'});
+    if(r.ok){readBuf(await r.arrayBuffer(),'Live data');return true;}
+  }catch(e){}
+  if(!silent)alert('Could not load live data from GitHub — check your connection. The sync may still be publishing; try Refresh again in a moment.');
+  return false;
 }
 
 /* ---------- data ---------- */
