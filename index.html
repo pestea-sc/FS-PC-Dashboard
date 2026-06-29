@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glitches &amp; Pest Issues Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --green:#1f6f54;--green-dk:#13402f;--green-lt:#eaf3ef;
+    --termite:#c0651c;--rodent:#5b6e8c;--general:#1f6f54;
+    --amber:#c98a0e;--red:#c0392b;--grey:#6b7a74;--blue:#2a6fb0;
+    --ink:#1c2b25;--line:#d8e4de;--bg:#f4f7f5;--card:#fff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+  header{background:var(--green-dk);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;font-weight:700}
+  header .sub{font-size:12px;opacity:.8;margin-top:2px}
+  .grow{flex:1}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button,.btn{font-family:inherit;font-size:13px;border:none;border-radius:7px;padding:8px 13px;cursor:pointer;background:var(--green);color:#fff;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  button:hover{filter:brightness(1.08)}
+  .btn.ghost{background:rgba(255,255,255,.14);color:#fff}
+  .btn.light{background:#fff;color:var(--green-dk);border:1px solid var(--line)}
+  .btn.wa{background:#25d366;color:#0a3d23}
+  .btn.sm{padding:5px 9px;font-size:12px;border-radius:6px}
+  input,select,textarea{font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink)}
+  input[type=text].url{min-width:210px}
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 20px 60px}
+  .tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:2px 0 20px;flex-wrap:wrap}
+  .tab{background:none;color:var(--grey);border:none;border-bottom:3px solid transparent;border-radius:0;padding:10px 14px;font-weight:700;font-size:13px}
+  .tab.active{color:var(--green-dk);border-bottom-color:var(--green)}
+  .tab .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .view{display:none}.view.active{display:block}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+  .kpi .n{font-size:28px;font-weight:800;color:var(--green-dk);line-height:1}
+  .kpi .l{font-size:12px;color:var(--grey);margin-top:6px;font-weight:600}
+  .kpi.warn .n{color:var(--red)}.kpi.amb .n{color:var(--amber)}
+  .kpi.cat{border-top:4px solid var(--line)}
+  .kpi.t-term{border-top-color:var(--termite)}.kpi.t-rod{border-top-color:var(--rodent)}.kpi.t-gen{border-top-color:var(--general)}
+  .kpi .sm2{font-size:11.5px;color:var(--grey);margin-top:3px}
+  .toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .toggle button{background:#fff;color:var(--grey);border-radius:0;padding:7px 16px;font-weight:700}
+  .toggle button.active{background:var(--green);color:#fff}
+  .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+  .panel h3{margin:0 0 10px;font-size:13px;color:var(--green-dk);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+  .panel h3 .dot{width:11px;height:11px;border-radius:50%}
+  .chart-box{position:relative;height:230px}
+  .secondary{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--card)}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--green-lt);color:var(--green-dk);font-size:11px;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0}
+  tr:hover td{background:#fafdfb}
+  .table-card{background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .table-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .table-head h2{font-size:15px;margin:0;color:var(--green-dk)}
+  .table-scroll{max-height:64vh;overflow:auto}
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .s-open{background:#fdecea;color:var(--red)}.s-prog{background:#fff4dd;color:var(--amber)}.s-resolved{background:#e4f4ec;color:var(--green)}
+  .c-term{background:#fbe7da;color:var(--termite)}.c-rod{background:#e7ecf3;color:var(--rodent)}.c-gen{background:#e4f4ec;color:var(--general)}
+  .pr-high{background:#fdecea;color:var(--red)}.pr-medium{background:#fff4dd;color:var(--amber)}.pr-low{background:#eef1f0;color:var(--grey)}
+  .tag{display:inline-block;background:#eef3f1;color:var(--grey);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:11px;margin:1px 3px 1px 0}
+  .local-tag{background:var(--blue);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:6px}
+  .muted{color:var(--grey)}
+  .drop{border:2px dashed var(--line);border-radius:14px;background:var(--card);padding:46px 20px;text-align:center;color:var(--grey)}
+  .drop.drag{border-color:var(--green);background:var(--green-lt)}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(15,30,24,.45);align-items:flex-start;justify-content:center;z-index:50;padding:36px 16px;overflow:auto}
+  .modal-bg.open{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:540px;width:100%;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+  .modal h2{margin:0 0 4px;font-size:18px;color:var(--green-dk)}
+  .modal p.hint{margin:0 0 16px;color:var(--grey);font-size:12.5px}
+  .field{margin-bottom:12px;display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;font-weight:700}.field .req{color:var(--red)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .preview{background:var(--green-lt);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:12.5px;white-space:pre-wrap;color:var(--green-dk);font-family:Menlo,Consolas,monospace}
+  .note{font-size:12px;color:var(--grey);background:#fff;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:8px;padding:10px 12px;margin:14px 0}
+  .status-bar{font-size:12px;color:#fff;opacity:.92}
+  .row-actions{white-space:nowrap}
+  @media(max-width:760px){.secondary{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Glitches &amp; Pest Issues Dashboard</h1>
+    <div class="sub">Reads your Glitches export &amp; the template &bull; Termite / Rodent / General Pest</div>
+  </div>
+  <div class="grow"></div>
+  <div class="toolbar">
+    <span id="srcInfo" class="status-bar">No data loaded</span>
+    <input type="text" class="url" id="urlInput" placeholder="SharePoint / Drive link">
+    <button class="btn ghost sm" id="urlBtn">Load link</button>
+    <button class="btn light sm" id="uploadBtn">Upload Excel</button>
+    <button class="btn light sm" id="reloadBtn">Refresh data</button>
+    <button class="btn light sm" id="sampleBtn">Sample</button>
+    <button class="btn light sm" id="pdfBtn">Export PDF</button>
+    <button class="btn ghost sm" id="waCfgBtn">WhatsApp setup</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-v="dashboard">Dashboard</button>
+    <button class="tab" data-v="issues">Issues &amp; Glitches</button>
+    <button class="tab" data-v="termite"><span class="dot" style="background:var(--termite)"></span>Termite</button>
+    <button class="tab" data-v="rodent"><span class="dot" style="background:var(--rodent)"></span>Rodent</button>
+    <button class="tab" data-v="general"><span class="dot" style="background:var(--general)"></span>General Pest</button>
+  </div>
+
+  <section class="view active" id="v-dashboard">
+    <div id="ovEmpty" class="drop" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+      <p style="font-size:15px;margin:0 0 6px;color:var(--green-dk);font-weight:700">Drop your Glitches workbook here, or use Upload</p>
+      <p style="margin:0 0 14px">Reads your existing export (no reformatting) or the supplied template.</p>
+      <button class="btn" id="dropUpload">Choose file</button>
+      <button class="btn light" id="dropSample">Try sample data</button>
+    </div>
+    <div id="ovContent" style="display:none">
+      <div class="kpis" id="kpis"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin:6px 0 14px;flex-wrap:wrap">
+        <span style="font-weight:700;color:var(--green-dk)">Issues by</span>
+        <div class="toggle" id="periodToggle">
+          <button data-p="week" class="active">Week</button>
+          <button data-p="month">Month</button>
+        </div>
+        <div class="grow"></div>
+        <button class="btn light sm" id="exportAll">Export all issues</button>
+        <button class="btn sm" id="pdfBtn2">Export dashboard to PDF</button>
+      </div>
+      <div class="charts">
+        <div class="panel"><h3><span class="dot" style="background:var(--termite)"></span>Termite issues</h3><div class="chart-box"><canvas id="cTerm"></canvas></div></div>
+        <div class="panel"><h3><span class="dot" style="background:var(--rodent)"></span>Rodent issues</h3><div class="chart-box"><canvas id="cRod"></canvas></div></div>
+        <div class="panel"><h3><span class="dot" style="background:var(--general)"></span>General pest issues</h3><div class="chart-box"><canvas id="cGen"></canvas></div></div>
+      </div>
+      <div class="secondary">
+        <div class="panel"><h3>Status overview</h3><div class="chart-box"><canvas id="cStatus"></canvas></div></div>
+        <div class="panel"><h3>Issues by category</h3><div class="chart-box"><canvas id="cSplit"></canvas></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-issues">
+    <div class="table-card">
+      <div class="table-head">
+        <h2>Issues &amp; Glitches</h2><span id="issuesCount" class="muted" style="font-size:12px"></span>
+        <div class="grow"></div>
+        <input type="text" id="issuesFilter" placeholder="Filter...">
+        <button class="btn sm" id="addIssueBtn">+ New issue</button>
+        <button class="btn light sm" id="exportIssues">Export</button>
+      </div>
+      <div class="table-scroll"><table id="issuesTable"></table></div>
+    </div>
+    <div class="note">Status &amp; Action come from your workbook columns. Issues you add here are stored on this device (flagged <span class="local-tag">added here</span>) until you <b>Export</b> and re-share. The <b>WA</b> button alerts your WhatsApp group about any issue.</div>
+  </section>
+
+  <section class="view" id="v-termite">
+    <div class="table-card">
+      <div class="table-head"><h2><span class="pill c-term">Termite</span> issues &mdash; full history</h2><span id="termiteCount" class="muted" style="font-size:12px"></span>
+        <div class="grow"></div><input type="text" id="termiteFilter" placeholder="Filter..."><button class="btn light sm" id="exportTermite">Export</button></div>
+      <div class="table-scroll"><table id="termiteTable"></table></div>
+    </div>
+  </section>
+  <section class="view" id="v-rodent">
+    <div class="table-card">
+      <div class="table-head"><h2><span class="pill c-rod">Rodent</span> issues &mdash; full history</h2><span id="rodentCount" class="muted" style="font-size:12px"></span>
+        <div class="grow"></div><input type="text" id="rodentFilter" placeholder="Filter..."><button class="btn light sm" id="exportRodent">Export</button></div>
+      <div class="table-scroll"><table id="rodentTable"></table></div>
+    </div>
+  </section>
+  <section class="view" id="v-general">
+    <div class="table-card">
+      <div class="table-head"><h2><span class="pill c-gen">General Pest</span> issues &mdash; full history</h2><span id="generalCount" class="muted" style="font-size:12px"></span>
+        <div class="grow"></div><input type="text" id="generalFilter" placeholder="Filter..."><button class="btn light sm" id="exportGeneral">Export</button></div>
+      <div class="table-scroll"><table id="generalTable"></table></div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <h2>Log a new issue</h2>
+    <p class="hint">Adds an issue locally and can alert the WhatsApp group. Export to merge it into the workbook.</p>
+    <div class="grid2">
+      <div class="field"><label>ID</label><input type="text" id="a_id"></div>
+      <div class="field"><label>Date</label><input type="date" id="a_date"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Villa / Ref</label><input type="text" id="a_ref"></div>
+      <div class="field"><label>Reported by</label><input type="text" id="a_team"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Type (tags, ; separated)</label><input type="text" id="a_tags" placeholder="Pest control;Wildlife"></div>
+      <div class="field"><label>Severity</label><select id="a_sev"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    </div>
+    <div class="field"><label>Description <span class="req">*</span></label><textarea id="a_desc" rows="2" placeholder="What was reported? (mention 'termite' or 'rat/mouse/rabbit' to route it)"></textarea></div>
+    <div class="field"><label>WhatsApp message preview</label><div class="preview" id="addPreview"></div></div>
+    <div class="modal-actions">
+      <button class="btn light" id="addCancel">Cancel</button>
+      <button class="btn" id="addSaveOnly">Save only</button>
+      <button class="btn wa" id="addSaveSend">Save &amp; alert WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="waModal">
+  <div class="modal">
+    <h2>WhatsApp setup</h2>
+    <p class="hint">WhatsApp can&rsquo;t auto-post to a group, so this opens WhatsApp with the message pre-filled &mdash; you tap once to send into the group.</p>
+    <div class="field"><label>Group name (label only)</label><input type="text" id="waGroup" placeholder="e.g. Site Pest Issues"></div>
+    <div class="field"><label>Direct chat number (optional, international, digits only)</label><input type="text" id="waNumber" placeholder="e.g. 254712345678">
+      <span style="font-size:11.5px;color:var(--grey)">Leave blank to pick the group from WhatsApp&rsquo;s share list (the only route into a group).</span></div>
+    <div class="modal-actions">
+      <button class="btn light" id="waClearLocal">Clear local additions</button>
+      <button class="btn" id="waSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const K={group:'pe_wa_group',num:'pe_wa_number',local:'pe_local_issues'};
+let DATA={issues:[]};
+let LOCAL=jload(K.local,[]);
+let PERIOD='week';
+let charts={};
+let VIEWS={issues:[],termite:[],rodent:[],general:[]};
+
+function $(id){return document.getElementById(id);}
+function jload(k,def){try{const v=JSON.parse(localStorage.getItem(k));return v==null?def:v;}catch(e){return def;}}
+function jsave(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function norm(s){return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,'');}
+function pad(n){return n<10?'0'+n:''+n;}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function nonEmpty(v){return !(v===undefined||v===null||String(v).trim()==='');}
+function parseDate(v){
+  if(v==null||v==='')return null;
+  if(v instanceof Date)return isNaN(v)?null:v;
+  if(typeof v==='number'){const d=new Date(Math.round((v-25569)*86400000));return isNaN(d)?null:d;}
+  const s=String(v).trim();
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){let y=+m[3];if(y<100)y+=2000;return new Date(y,+m[2]-1,+m[1]);}
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+function dateFromInput(v){if(!v)return '';const m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?new Date(+m[1],+m[2]-1,+m[3]):new Date(v);}
+function fmtDate(d){d=parseDate(d);return d?pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear():'';}
+function keyDate(d){return d?d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()):'';}
+function todayMid(){const d=new Date();d.setHours(0,0,0,0);return d;}
+function monday(d){const off=(d.getDay()+6)%7;const m=new Date(d);m.setDate(d.getDate()-off);m.setHours(0,0,0,0);return m;}
+function firstOfMonth(d){return new Date(d.getFullYear(),d.getMonth(),1);}
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function catOf(r){const t=((r.tags||'')+' '+(r.desc||'')).toLowerCase();
+  if(/termite|white ant/.test(t))return 'Termite';
+  if(/\b(rat|rats|mouse|mice|rodent|rodents|rabbit|rabbits|bunny|bunnies|hare|hares)\b/.test(t))return 'Rodent';
+  return 'General';}
+
+/* ---------- robust loader ---------- */
+const HDR={id:'id',issueid:'id',glitchid:'id',ref:'ref',reference:'ref',
+  date:'date',datelogged:'date',dateraised:'date',datereported:'date',reported:'date',dateofreport:'date',
+  villa:'ref',villaref:'ref',room:'ref',roomno:'ref',roomnumber:'ref',site:'ref',sitearea:'ref',area:'ref',location:'ref',unit:'ref',
+  reportedby:'team',loggedby:'team',team:'team',department:'team',dept:'team',raisedby:'team',assignedto:'team',
+  type:'tags',category:'tags',categories:'tags',tags:'tags',pesttype:'tags',issuetype:'tags',
+  description:'desc',desc:'desc',issue:'desc',glitch:'desc',details:'desc',detail:'desc',problem:'desc',
+  severity:'sev',priority:'sev',
+  status:'status',
+  actiontaken:'action',action:'action',response:'action',resolution:'action',remarks:'action',
+  actiondate:'adate',dateactioned:'adate',
+  actionby:'aby',resolvedby:'aby'};
+function cellLooksDate(v){if(v instanceof Date)return true;if(typeof v==='string')return /\d{1,4}[\/\-.]\d{1,2}[\/\-.]\d{1,4}/.test(v);return false;}
+function isNumLike(v){return typeof v==='number'||(typeof v==='string'&&/^\s*\d+(\.\d+)?\s*$/.test(v));}
+
+function buildFromGrid(grid){
+  let hr=-1;
+  for(let i=0;i<Math.min(grid.length,12);i++){
+    const row=grid[i]||[];if(row.filter(nonEmpty).length<3)continue;
+    let match=0;row.forEach(c=>{if(nonEmpty(c)&&HDR[norm(c)])match++;});
+    if(match>=2){hr=i;break;}
+  }
+  let issues=[];
+  if(hr>=0){
+    const headers=grid[hr];const map={};const used={};
+    headers.forEach((c,idx)=>{if(nonEmpty(c)){const f=HDR[norm(c)];if(f&&!used[f]){map[idx]=f;used[f]=1;}}});
+    for(let i=hr+1;i<grid.length;i++){
+      const row=grid[i]||[];if(!row.filter(nonEmpty).length)continue;
+      const o={};for(const idx in map)o[map[idx]]=row[idx];
+      if(nonEmpty(o.desc)||nonEmpty(o.id)||nonEmpty(o.tags))issues.push(o);
+    }
+  }else{
+    const dataRows=grid.filter(r=>r&&r.filter(nonEmpty).length>=3);
+    if(!dataRows.length)return [];
+    let maxc=0;dataRows.forEach(r=>maxc=Math.max(maxc,r.length));
+    const cols=[];for(let c=0;c<maxc;c++){if(dataRows.some(r=>nonEmpty(r[c])))cols.push(c);}
+    const stat={};
+    cols.forEach(c=>{
+      const vals=dataRows.map(r=>r[c]).filter(nonEmpty);const n=vals.length||1;
+      let nd=0,nn=0,len=0,cat=0;
+      vals.forEach(v=>{if(cellLooksDate(v))nd++;if(isNumLike(v))nn++;len+=String(v).length;
+        if(String(v).indexOf(';')>=0||/pest|wildlife|disturb|termite|rodent|insect|reptile|bug|control|noise|maint/i.test(String(v)))cat++;});
+      stat[c]={nd:nd/n,nn:nn/n,len:len/n,cat:cat/n};
+    });
+    const taken={};
+    const pick=(score,cond)=>{let best=-1,bv=-1;cols.forEach(c=>{if(taken[c])return;const v=score(stat[c]);if((cond?cond(stat[c]):true)&&v>bv){bv=v;best=c;}});if(best>=0)taken[best]=1;return best;};
+    const dateC=pick(s=>s.nd,s=>s.nd>=0.5);
+    const tagsC=pick(s=>s.cat,s=>s.cat>0);
+    const descC=pick(s=>s.len);
+    const refC=pick(s=>s.nn);
+    const teamC=pick(()=>1);
+    dataRows.forEach(r=>{
+      const o={};
+      if(dateC>=0)o.date=r[dateC];if(descC>=0)o.desc=r[descC];if(tagsC>=0)o.tags=r[tagsC];
+      if(refC>=0)o.ref=r[refC];if(teamC>=0)o.team=r[teamC];
+      if(nonEmpty(o.desc)||nonEmpty(o.tags))issues.push(o);
+    });
+  }
+  issues.forEach((o,i)=>{if(!nonEmpty(o.id))o.id='G-'+('00'+(i+1)).slice(-3);});
+  return issues;
+}
+function pickSheet(wb){for(const n of wb.SheetNames){const x=norm(n);if(x.indexOf('glitch')>=0||x.indexOf('issue')>=0||x.indexOf('pest')>=0)return n;}return wb.SheetNames[0];}
+function ingest(wb){
+  const grid=XLSX.utils.sheet_to_json(wb.Sheets[pickSheet(wb)],{header:1,cellDates:true,blankrows:false});
+  DATA.issues=buildFromGrid(grid);renderAll();
+}
+function readBuf(buf,label){
+  try{ingest(XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true}));
+    const n=DATA.issues.length;
+    $('srcInfo').textContent=label+' • '+n+' rows • '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    if(!n)alert('Loaded the file but found no issue rows. Check the sheet has at least a date, a category/type and a description column.');}
+  catch(e){alert('Could not read that file.\n\n'+e.message);}
+}
+function handleFile(f){const r=new FileReader();r.onload=e=>readBuf(e.target.result,f.name);r.readAsArrayBuffer(f);}
+function directLink(u){
+  let m=u.match(/drive\.google\.com\/file\/d\/([^/]+)/);if(m)return 'https://drive.google.com/uc?export=download&id='+m[1];
+  m=u.match(/[?&]id=([^&]+)/);if(m&&u.indexOf('drive.google')>=0)return 'https://drive.google.com/uc?export=download&id='+m[1];
+  if(u.indexOf('dropbox.com')>=0)return u.replace('?dl=0','?dl=1').replace('www.dropbox.com','dl.dropboxusercontent.com');
+  if(u.indexOf('sharepoint.com')>=0||u.indexOf('1drv.ms')>=0){if(u.indexOf('download=1')<0)return u+(u.indexOf('?')>=0?'&':'?')+'download=1';}
+  return u;
+}
+async function loadUrl(u){
+  if(!u){alert('Paste a shared-file link first.');return;}
+  try{const res=await fetch(directLink(u));if(!res.ok)throw new Error('HTTP '+res.status);readBuf(await res.arrayBuffer(),'Shared link');}
+  catch(e){alert('Couldn’t fetch that link directly. SharePoint and OneDrive usually block cross-site downloads.\n\nDownload the file and use “Upload Excel” instead.\n\n('+e.message+')');}
+}
+// Auto-load the live workbook published next to this page (e.g. data.xlsx in the GitHub repo).
+async function autoLoad(silent){
+  try{
+    const res=await fetch('data.xlsx?t='+Date.now(),{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    readBuf(await res.arrayBuffer(),'Live data');
+    return true;
+  }catch(e){
+    if(!silent)alert('No live data file found yet (data.xlsx). Upload a workbook, or set up the SharePoint→GitHub sync.\n\n('+e.message+')');
+    return false;
+  }
+}
+
+/* ---------- data ---------- */
+function mergedAll(){
+  const base=DATA.issues.map(r=>Object.assign({},r)).concat(LOCAL.map(r=>Object.assign({_local:true},r)));
+  base.sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);return (db?db.getTime():0)-(da?da.getTime():0);});
+  return base;
+}
+function byCat(c){return mergedAll().filter(r=>catOf(r)===c);}
+function hasData(){return mergedAll().length>0;}
+function statusClass(s){const n=norm(s);if(n.indexOf('progress')>=0)return 's-prog';if(n==='resolved'||n==='done'||n==='closed'||n==='complete'||n==='completed')return 's-resolved';return 's-open';}
+function statusLabel(s){return nonEmpty(s)?s:'Open';}
+function catClass(c){return c==='Termite'?'c-term':c==='Rodent'?'c-rod':'c-gen';}
+function sevClass(s){const n=norm(s);return n==='high'?'pr-high':n==='low'?'pr-low':'pr-medium';}
+
+function renderAll(){
+  $('ovEmpty').style.display=hasData()?'none':'block';
+  $('ovContent').style.display=hasData()?'block':'none';
+  if(hasData()){renderKPIs();renderCharts();}
+  renderTable('issues','issuesTable',mergedAll(),$('issuesFilter').value,'issuesCount');
+  renderTable('termite','termiteTable',byCat('Termite'),$('termiteFilter').value,'termiteCount');
+  renderTable('rodent','rodentTable',byCat('Rodent'),$('rodentFilter').value,'rodentCount');
+  renderTable('general','generalTable',byCat('General'),$('generalFilter').value,'generalCount');
+}
+function card(n,l,c){return `<div class="kpi ${c||''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;}
+function catCard(o,l,cls){return `<div class="kpi cat ${cls}"><div class="n">${o.t}</div><div class="l">${l}</div><div class="sm2">${o.o} open / unresolved</div></div>`;}
+function renderKPIs(){
+  const all=mergedAll();
+  const open=all.filter(r=>statusClass(r.status)==='s-open').length;
+  const prog=all.filter(r=>statusClass(r.status)==='s-prog').length;
+  const res=all.filter(r=>statusClass(r.status)==='s-resolved').length;
+  const cc=c=>{const x=byCat(c);return{t:x.length,o:x.filter(r=>statusClass(r.status)!=='s-resolved').length};};
+  $('kpis').innerHTML=card(all.length,'Total issues')+card(open,'Open',open?'warn':'')+card(prog,'In progress',prog?'amb':'')+card(res,'Resolved')
+    +catCard(cc('Termite'),'Termite','t-term')+catCard(cc('Rodent'),'Rodent','t-rod')+catCard(cc('General'),'General Pest','t-gen');
+}
+function buildTrend(mode){
+  const issues=mergedAll();const dates=issues.map(r=>parseDate(r.date)).filter(Boolean);
+  if(!dates.length)return{labels:[],series:{Termite:[],Rodent:[],General:[]}};
+  let min=new Date(Math.min.apply(null,dates));
+  let max=new Date(Math.max(Math.max.apply(null,dates),todayMid().getTime()));
+  const periods=[];
+  if(mode==='week'){let c=monday(min);const end=monday(max);while(c<=end){periods.push(new Date(c));c=new Date(c);c.setDate(c.getDate()+7);}}
+  else{let c=firstOfMonth(min);const end=firstOfMonth(max);while(c<=end){periods.push(new Date(c));c=new Date(c.getFullYear(),c.getMonth()+1,1);}}
+  const N=mode==='week'?12:6;const win=periods.slice(-N);
+  const keyOf=d=>mode==='week'?keyDate(monday(d)):d.getFullYear()+'-'+pad(d.getMonth()+1);
+  const keys=win.map(keyOf);
+  const labels=win.map(p=>mode==='week'?pad(p.getDate())+'/'+pad(p.getMonth()+1):MON[p.getMonth()]+' '+String(p.getFullYear()).slice(2));
+  const series={Termite:keys.map(()=>0),Rodent:keys.map(()=>0),General:keys.map(()=>0)};
+  issues.forEach(r=>{const dt=parseDate(r.date);if(!dt)return;const i=keys.indexOf(keyOf(dt));if(i>=0)series[catOf(r)][i]++;});
+  return{labels,series};
+}
+function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
+function barCfg(labels,data,color){return{type:'bar',data:{labels,datasets:[{label:'Issues',data,backgroundColor:color,borderRadius:3}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,autoSkip:true}}}}};}
+function renderCharts(){
+  const t=buildTrend(PERIOD);
+  mkChart('cTerm',barCfg(t.labels,t.series.Termite,'#c0651c'));
+  mkChart('cRod',barCfg(t.labels,t.series.Rodent,'#5b6e8c'));
+  mkChart('cGen',barCfg(t.labels,t.series.General,'#1f6f54'));
+  const all=mergedAll();const st={Open:0,'In Progress':0,Resolved:0};
+  all.forEach(r=>{const c=statusClass(r.status);st[c==='s-prog'?'In Progress':c==='s-resolved'?'Resolved':'Open']++;});
+  mkChart('cStatus',{type:'doughnut',data:{labels:Object.keys(st),datasets:[{data:Object.values(st),backgroundColor:['#c0392b','#c98a0e','#1f6f54']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  mkChart('cSplit',{type:'doughnut',data:{labels:['Termite','Rodent','General Pest'],datasets:[{data:[byCat('Termite').length,byCat('Rodent').length,byCat('General').length],backgroundColor:['#c0651c','#5b6e8c','#1f6f54']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+}
+
+/* ---------- tables ---------- */
+function applyFilter(rows,q){if(!q)return rows;q=q.toLowerCase();
+  return rows.filter(r=>['id','date','ref','team','tags','desc','sev','status','action'].some(k=>{let v=r[k];if(k==='date')v=fmtDate(v);return String(v==null?'':v).toLowerCase().indexOf(q)>=0;}));}
+function tagsHtml(t){if(!nonEmpty(t))return '';return String(t).split(';').map(x=>x.trim()).filter(Boolean).map(x=>'<span class="tag">'+esc(x)+'</span>').join('');}
+function renderTable(key,tableId,rows,filter,countId){
+  rows=applyFilter(rows,filter);VIEWS[key]=rows;
+  if($(countId))$(countId).textContent=rows.length+(filter?' (filtered)':'')+' issues';
+  if(!rows.length){$(tableId).innerHTML='<tbody><tr><td style="padding:30px;color:var(--grey)">No issues here'+(key!=='issues'?' yet — rows route here automatically when the description mentions this pest.':'. Load a workbook or add one.')+'</td></tr></tbody>';return;}
+  let h='<thead><tr><th>Date</th><th>ID</th><th>Category</th><th>Type</th><th>Villa/Ref</th><th>Description</th><th>Sev.</th><th>Status</th><th>Action taken</th><th></th></tr></thead><tbody>';
+  rows.forEach((r,i)=>{const cat=catOf(r);
+    h+='<tr>'+
+      `<td>${fmtDate(r.date)}</td>`+
+      `<td>${esc(r.id)}${r._local?'<span class="local-tag">added here</span>':''}</td>`+
+      `<td><span class="pill ${catClass(cat)}">${cat}</span></td>`+
+      `<td>${tagsHtml(r.tags)||'<span class="muted">&mdash;</span>'}</td>`+
+      `<td>${esc(r.ref)}${nonEmpty(r.team)?'<div class="muted" style="font-size:11.5px">'+esc(r.team)+'</div>':''}</td>`+
+      `<td>${esc(r.desc)}</td>`+
+      `<td><span class="pill ${sevClass(r.sev)}">${esc(nonEmpty(r.sev)?r.sev:'-')}</span></td>`+
+      `<td><span class="pill ${statusClass(r.status)}">${esc(statusLabel(r.status))}</span></td>`+
+      `<td>${nonEmpty(r.action)?esc(r.action):'<span class="muted">&mdash;</span>'}${nonEmpty(r.aby)?'<div class="muted" style="font-size:11.5px">'+esc(r.aby)+(nonEmpty(r.adate)?' • '+fmtDate(r.adate):'')+'</div>':''}</td>`+
+      `<td class="row-actions"><button class="btn wa sm" onclick="sendIdx('${key}',${i})">WA</button></td>`+
+    '</tr>';
+  });
+  $(tableId).innerHTML=h+'</tbody>';
+}
+
+/* ---------- whatsapp ---------- */
+function buildMessage(r){
+  const g=localStorage.getItem(K.group)||'';const L=[];
+  L.push('PEST / GLITCH'+(g?' – '+g:''));
+  L.push((r.id?r.id+': ':'')+'['+catOf(r)+'] '+(r.desc||''));
+  if(nonEmpty(r.ref))L.push('Villa/Ref: '+r.ref);
+  if(nonEmpty(r.tags))L.push('Type: '+r.tags);
+  if(nonEmpty(r.sev))L.push('Severity: '+r.sev);
+  L.push('Status: '+statusLabel(r.status));
+  if(nonEmpty(r.action))L.push('Action: '+r.action);
+  const d=parseDate(r.date);if(d)L.push('Logged: '+fmtDate(d)+(nonEmpty(r.team)?' • '+r.team:''));
+  return L.join('\n');
+}
+function sendWhatsApp(text){const num=(localStorage.getItem(K.num)||'').replace(/[^0-9]/g,'');const enc=encodeURIComponent(text);
+  window.open(num?('https://wa.me/'+num+'?text='+enc):('https://api.whatsapp.com/send?text='+enc),'_blank');}
+function sendIdx(key,i){const r=VIEWS[key][i];if(r)sendWhatsApp(buildMessage(r));}
+
+/* ---------- add issue ---------- */
+function nextId(){let mx=0;mergedAll().forEach(r=>{const m=String(r.id||'').match(/(\d+)/);if(m)mx=Math.max(mx,+m[1]);});return 'G-'+('00'+(mx+1)).slice(-3);}
+function readAdd(){return{id:$('a_id').value.trim()||nextId(),date:$('a_date').value?dateFromInput($('a_date').value):todayMid(),
+  ref:$('a_ref').value.trim(),team:$('a_team').value.trim(),tags:$('a_tags').value.trim(),sev:$('a_sev').value,
+  desc:$('a_desc').value.trim(),status:'Open',action:'',adate:'',aby:'',_local:true};}
+function refreshAddPreview(){$('addPreview').textContent=buildMessage(readAdd());}
+function openAdd(){$('a_id').value=nextId();$('a_date').valueAsDate=new Date();
+  ['a_ref','a_team','a_tags','a_desc'].forEach(i=>$(i).value='');$('a_sev').value='Medium';
+  refreshAddPreview();$('addModal').classList.add('open');}
+function saveAdd(send){const r=readAdd();if(!r.desc){alert('Please enter a description.');return;}
+  LOCAL.push(r);jsave(K.local,LOCAL);renderAll();$('addModal').classList.remove('open');if(send)sendWhatsApp(buildMessage(r));}
+
+/* ---------- excel export ---------- */
+const EXP=[['ID','id'],['Date','date'],['Villa / Ref','ref'],['Reported By','team'],['Type','tags'],['Description','desc'],['Severity','sev'],['Status','status'],['Action Taken','action'],['Action Date','adate'],['Action By','aby'],['Pest Category','catx']];
+function rowsToAOA(rows){return [EXP.map(c=>c[0])].concat(rows.map(r=>EXP.map(c=>{if(c[1]==='catx')return catOf(r);let v=r[c[1]];if(c[1]==='date'||c[1]==='adate')return fmtDate(v);return v==null?'':v;})));}
+function exportRows(rows,sheet,fname){if(!rows.length){alert('Nothing to export in this view.');return;}
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rowsToAOA(rows)),sheet);
+  XLSX.writeFile(wb,fname+'_'+keyDate(todayMid())+'.xlsx');}
+
+/* ---------- PDF report ---------- */
+function fitImg(doc,chart,x,y,bw,bh){
+  if(!chart)return;const cv=chart.canvas;
+  let data;try{data=chart.toBase64Image('image/png',1);}catch(e){return;}
+  const sc=Math.min(bw/cv.width,bh/cv.height);const w=cv.width*sc,h=cv.height*sc;
+  doc.addImage(data,'PNG',x+(bw-w)/2,y,w,h);
+}
+function exportPDF(){
+  if(!hasData()){alert('Load a workbook first.');return;}
+  if(!(window.jspdf&&window.jspdf.jsPDF)){alert('The PDF library hasn’t loaded yet — check your internet connection and try again.');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  const W=doc.internal.pageSize.getWidth();
+  const all=mergedAll();
+  const open=all.filter(r=>statusClass(r.status)==='s-open').length;
+  const prog=all.filter(r=>statusClass(r.status)==='s-prog').length;
+  const res=all.filter(r=>statusClass(r.status)==='s-resolved').length;
+  doc.setFontSize(16);doc.setTextColor(19,64,47);doc.text('Pest Issues Dashboard — Report',40,40);
+  doc.setFontSize(10);doc.setTextColor(90,90,90);
+  doc.text('Generated '+fmtDate(todayMid())+'   •   '+all.length+' issues   •   Open '+open+' / In progress '+prog+' / Resolved '+res,40,58);
+  doc.text('Termite '+byCat('Termite').length+'   •   Rodent '+byCat('Rodent').length+'   •   General Pest '+byCat('General').length+'   •   charts by '+PERIOD,40,72);
+  const gap=18,bh=150,cw=(W-80-2*gap)/3;
+  const top=[['Termite trend','cTerm'],['Rodent trend','cRod'],['General Pest trend','cGen']];
+  const bot=[['Status overview','cStatus'],['Category split','cSplit']];
+  let y=96;
+  top.forEach((it,i)=>{const x=40+i*(cw+gap);doc.setFontSize(9);doc.setTextColor(60,60,60);doc.text(it[0],x,y);fitImg(doc,charts[it[1]],x,y+6,cw,bh);});
+  y=96+bh+30;
+  bot.forEach((it,i)=>{const x=40+i*(cw+gap);doc.setFontSize(9);doc.setTextColor(60,60,60);doc.text(it[0],x,y);fitImg(doc,charts[it[1]],x,y+6,cw,bh);});
+  doc.addPage();
+  doc.setFontSize(13);doc.setTextColor(19,64,47);doc.text('All issues',40,40);
+  const body=all.map(r=>[fmtDate(r.date),String(r.id||''),catOf(r),String(r.tags||''),String(r.ref==null?'':r.ref),String(r.desc||''),String(r.sev||''),statusLabel(r.status),String(r.action||'')]);
+  doc.autoTable({head:[['Date','ID','Category','Type','Villa/Ref','Description','Sev','Status','Action taken']],body,startY:54,
+    styles:{fontSize:7,cellPadding:3,overflow:'linebreak',valign:'top'},headStyles:{fillColor:[31,111,84]},
+    columnStyles:{0:{cellWidth:48},1:{cellWidth:44},2:{cellWidth:54},3:{cellWidth:88},4:{cellWidth:48},5:{cellWidth:150},6:{cellWidth:32},7:{cellWidth:58},8:{cellWidth:'auto'}}});
+  doc.save('Pest_Issues_Report_'+keyDate(todayMid())+'.pdf');
+}
+
+/* ---------- wiring ---------- */
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  b.classList.add('active');$('v-'+b.dataset.v).classList.add('active');});
+$('uploadBtn').onclick=$('dropUpload').onclick=()=>$('fileInput').click();
+$('reloadBtn').onclick=()=>autoLoad(false);
+$('fileInput').onchange=e=>{if(e.target.files[0])handleFile(e.target.files[0]);};
+$('sampleBtn').onclick=$('dropSample').onclick=loadSample;
+$('urlBtn').onclick=()=>loadUrl($('urlInput').value.trim());
+const ov=$('ovEmpty');ov.addEventListener('drop',e=>{e.preventDefault();ov.classList.remove('drag');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+$('periodToggle').addEventListener('click',e=>{if(!e.target.dataset.p)return;PERIOD=e.target.dataset.p;
+  document.querySelectorAll('#periodToggle button').forEach(b=>b.classList.toggle('active',b.dataset.p===PERIOD));renderCharts();});
+$('issuesFilter').oninput=()=>renderTable('issues','issuesTable',mergedAll(),$('issuesFilter').value,'issuesCount');
+$('termiteFilter').oninput=()=>renderTable('termite','termiteTable',byCat('Termite'),$('termiteFilter').value,'termiteCount');
+$('rodentFilter').oninput=()=>renderTable('rodent','rodentTable',byCat('Rodent'),$('rodentFilter').value,'rodentCount');
+$('generalFilter').oninput=()=>renderTable('general','generalTable',byCat('General'),$('generalFilter').value,'generalCount');
+$('addIssueBtn').onclick=openAdd;
+$('addCancel').onclick=()=>$('addModal').classList.remove('open');
+$('addSaveOnly').onclick=()=>saveAdd(false);
+$('addSaveSend').onclick=()=>saveAdd(true);
+['a_id','a_date','a_ref','a_team','a_tags','a_sev','a_desc'].forEach(i=>{$(i).addEventListener('input',refreshAddPreview);$(i).addEventListener('change',refreshAddPreview);});
+$('pdfBtn').onclick=$('pdfBtn2').onclick=exportPDF;
+$('exportIssues').onclick=$('exportAll').onclick=()=>exportRows(mergedAll(),'Glitches','Pest_Issues_All');
+$('exportTermite').onclick=()=>exportRows(byCat('Termite'),'Termite','Pest_Issues_Termite');
+$('exportRodent').onclick=()=>exportRows(byCat('Rodent'),'Rodent','Pest_Issues_Rodent');
+$('exportGeneral').onclick=()=>exportRows(byCat('General'),'General Pest','Pest_Issues_General');
+$('waCfgBtn').onclick=()=>{$('waGroup').value=localStorage.getItem(K.group)||'';$('waNumber').value=localStorage.getItem(K.num)||'';$('waModal').classList.add('open');};
+$('waSave').onclick=()=>{localStorage.setItem(K.group,$('waGroup').value.trim());localStorage.setItem(K.num,$('waNumber').value.trim());$('waModal').classList.remove('open');renderAll();};
+$('waClearLocal').onclick=()=>{if(confirm('Remove all issues added on this device? (The uploaded workbook is unaffected.)')){LOCAL=[];jsave(K.local,LOCAL);renderAll();$('waModal').classList.remove('open');}};
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+/* ---------- sample (resort-style data, incl. termite & rodent) ---------- */
+function loadSample(){
+  const Y=2026;const D=(m,d)=>new Date(Y,m-1,d);
+  const S=(id,date,ref,tags,desc,sev,status,action,adate,aby)=>({id,date,ref,team:'Engineering',tags,desc,sev,status,action:action||'',adate:adate||'',aby:aby||''});
+  DATA.issues=[
+    S('G-001',D(6,19),410,'Pest control;Wildlife','Geckos in the villas','Low','Resolved','Gaps sealed; humane removal',D(6,20),'A. Mwangi'),
+    S('G-002',D(6,19),604,'Wildlife','Spider in the villa','Low','Resolved','Removed; corners treated',D(6,19),'S. Naidoo'),
+    S('G-003',D(6,19),106,'Disturbance;Wildlife','Rabbit in the villa','Low','Resolved','Escorted out; grounds notified',D(6,20),'J. Otieno'),
+    S('G-004',D(6,20),604,'Pest control;Wildlife','Lizard in the villa','Low','Resolved','Removed and released',D(6,20),'S. Naidoo'),
+    S('G-005',D(6,21),112,'Wildlife','Rabbit in the villa','Low','In Progress','Fencing inspection booked',D(6,22),'J. Otieno'),
+    S('G-006',D(6,21),104,'Pest control','Bed bugs','High','In Progress','Heat treatment scheduled',D(6,22),'A. Mwangi'),
+    S('G-007',D(6,24),118,'Pest control','Bed bugs','High','Open'),
+    S('G-008',D(6,26),112,'Pest control;Wildlife','Couple of rabbits in villa eating fruits','Medium','Open'),
+    S('G-009',D(6,23),210,'Pest control','Termite mud tubes on villa skirting','High','In Progress','Termiticide applied; bait stations to follow',D(6,24),'A. Mwangi'),
+    S('G-010',D(6,25),305,'Pest control','Rats in the kitchen store','High','Open'),
+    S('G-011',D(5,28),118,'Pest control','Termite damage to door frame','High','Resolved','Frame treated and replaced',D(5,30),'A. Mwangi'),
+    S('G-012',D(6,5),402,'Pest control','Mouse droppings in pantry','Medium','Resolved','Stations placed; gap sealed',D(6,6),'J. Otieno')
+  ];
+  $('srcInfo').textContent='Sample data • '+DATA.issues.length+' rows';renderAll();
+}
+
+renderAll();
+autoLoad(true);   // silently load live data.xlsx if present (hosted use)
+</script>
+</body>
+</html>
