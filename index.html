@@ -143,6 +143,7 @@
         <div class="panel"><h3>Status overview</h3><div class="chart-box"><canvas id="cStatus"></canvas></div></div>
         <div class="panel"><h3>Issues by category</h3><div class="chart-box"><canvas id="cSplit"></canvas></div></div>
       </div>
+      <div class="panel" style="margin-top:14px"><h3>Issues by area (Villa / Ref)</h3><div class="chart-box" style="height:340px"><canvas id="cArea"></canvas></div></div>
     </div>
   </section>
 
@@ -435,6 +436,12 @@ function renderCharts(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
   mkChart('cSplit',{type:'doughnut',data:{labels:['Termite','Rodent','General Pest'],datasets:[{data:[byCat('Termite').length,byCat('Rodent').length,byCat('General').length],backgroundColor:['#c0651c','#5b6e8c','#1f6f54']}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  // issues by area (Villa / Ref) — sorted desc so repeat hotspots sit at the top
+  const areaCount={};
+  mergedAll().forEach(r=>{const k=nonEmpty(r.ref)?String(r.ref).trim():'(blank)';areaCount[k]=(areaCount[k]||0)+1;});
+  const areas=Object.keys(areaCount).sort((a,b)=>areaCount[b]-areaCount[a]).slice(0,45);
+  mkChart('cArea',{type:'bar',data:{labels:areas,datasets:[{label:'Issues',data:areas.map(a=>areaCount[a]),backgroundColor:'#2a6fb0',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:90,minRotation:0,autoSkip:false}}}}});
 }
 
 /* ---------- tables ---------- */
